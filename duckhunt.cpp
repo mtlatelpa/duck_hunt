@@ -73,6 +73,17 @@ struct Duck
     }
 };
 
+//duck sprite
+typedef double Arr[3];
+struct Sprite {
+Arr pos;
+Arr vel;
+};
+Sprite duck_sprite;
+Ppmimage *duckImage=NULL;
+GLuint duckTexture;
+int show_duck = 0;
+
 struct Game {
     int bullets;
     Duck *duck;
@@ -150,12 +161,15 @@ void deleteDuck(Game *game, Duck *duck);
 void check_resize(XEvent *e);
 
 Ppmimage *backgroundImage = NULL;
+Ppmimage *backgroundTransImage = NULL;
 Ppmimage *gameoverImage = NULL;
 GLuint backgroundTexture;
+GLuint backgroundTransTexture;
 GLuint gameoverTexture;
 int background = 1;
 int gameover = 1;
 bool endgame = false;
+int trees=1;
 
 int main(void)
 {
@@ -305,20 +319,51 @@ void init_opengl(void)
     //clear the screen
     glClearColor(1.0, 1.0, 1.0, 1.0);
     backgroundImage = ppm6GetImage("./images/background.ppm");
+    backgroundTransImage = ppm6GetImage("./images/backgroundTrans.ppm");
     gameoverImage = ppm6GetImage("./images/gameover.ppm");
     //
     //create opengl texture elements
     glGenTextures(1, &backgroundTexture);
+    glGenTextures(1, &backgroundTransTexture);
     glGenTextures(1, &gameoverTexture);
+    //-------------------------------------------------------------------
+    //duck sprite
+    duckImage = ppm6GetImage("./images/duck.ppm");
+    int w = duckImage->width;
+    int h = duckImage->height;
+    glBindTexture(GL_TEXTURE_2D, duckTexture);
+    //
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, duckImage->data);
+    //-------------------------------------------------------------------
     //background
     glBindTexture(GL_TEXTURE_2D, backgroundTexture);
     //
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, 3, backgroundImage->width, backgroundImage->height, 0, GL_RGB, GL_UNSIGNED_BYTE, backgroundImage->data);
+    //-------------------------------------------------------------------------
+    //
+    //forest transparent part
+    //
+    glBindTexture(GL_TEXTURE_2D, backgroundTransTexture);
+    //
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    //
+    //must build a new set of data...
+    w = backgroundTransImage->width;
+    h = backgroundTransImage->height;
+    unsigned char *ftData = buildAlphaData(backgroundTransImage);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                            GL_RGBA, GL_UNSIGNED_BYTE, ftData);
+    delete [] ftData;
+    //-------------------------------------------------------------------------
     //
     //gameover
     glBindTexture(GL_TEXTURE_2D, gameoverTexture);
+    //
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, 3, gameoverImage->width, gameoverImage->height, 0, GL_RGB, GL_UNSIGNED_BYTE, gameoverImage->data);
@@ -858,7 +903,61 @@ void render(Game *game)
 		glEnd();
 		d = d->next;
 	    }
+//	}
+	//duck sprite
+	show_duck= 1;
+	float wid = 50.0f;
+	//float wid = 50.0f;
+	duck_sprite.pos[0] = x;
+	duck_sprite.pos[1] = y;
+	duck_sprite.pos[2] = s->center.z;
+	//duck_sprite.pos[0] = s->center.x;
+	//duck_sprite.pos[1] = s->center.y;
+	//duck_sprite.pos[2] = s->center.z;
+	if(show_duck) {
+	    glPushMatrix();
+	    glTranslatef(duck_sprite.pos[0], duck_sprite.pos[1], duck_sprite.pos[2]);
+	    //implement direction change
+	    /*if (!silhouette) {
+	    glBindTexture(GL_TEXTURE_2D, bigfootTexture);
+	    }
+	    else {
+	    glBindTexture(GL_TEXTURE_2D, silhouetteTexture);
+	    glEnable(GL_ALPHA_TEST);
+	    glAlphaFunc(GL_GREATER, 0.0f);
+	    glColor4ub(255,255,255,255);
+	    }
+	    */
+	    glBegin(GL_QUADS);
+	    if (duck_sprite.vel[0] > 0.0) {
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(-wid,-wid);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(-wid, wid);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i( wid, wid);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i( wid,-wid);
+		} else {
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(-wid,-wid);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(-wid, wid);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i( wid, wid);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i( wid,-wid);
+	    }
+	    glEnd();
+	    glPopMatrix();
+	    
+	    if (trees) {
+		glBindTexture(GL_TEXTURE_2D, backgroundTransTexture);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, WINDOW_HEIGHT);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(WINDOW_WIDTH, WINDOW_HEIGHT);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(WINDOW_WIDTH, 0);
+		glEnd();
+	    }
+	    
+	    glDisable(GL_ALPHA_TEST);
 	}
+	
+	
+    }
 }
 
 void deleteDuck(Game *game, Duck *node)
