@@ -150,8 +150,12 @@ void deleteDuck(Game *game, Duck *duck);
 void check_resize(XEvent *e);
 
 Ppmimage *backgroundImage = NULL;
+Ppmimage *gameoverImage = NULL;
 GLuint backgroundTexture;
+GLuint gameoverTexture;
 int background = 1;
+int gameover = 1;
+bool endgame = false;
 
 int main(void)
 {
@@ -301,16 +305,25 @@ void init_opengl(void)
     //clear the screen
     glClearColor(1.0, 1.0, 1.0, 1.0);
     backgroundImage = ppm6GetImage("./images/background.ppm");
+    gameoverImage = ppm6GetImage("./images/gameover.ppm");
     //
     //create opengl texture elements
     glGenTextures(1, &backgroundTexture);
+    glGenTextures(1, &gameoverTexture);
     //background
     glBindTexture(GL_TEXTURE_2D, backgroundTexture);
     //
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, backgroundImage->width, backgroundImage->height, 0, GL_RGB, GL_UNSIGNED_BYTE, backgroundImage->data); 
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, backgroundImage->width, backgroundImage->height, 0, GL_RGB, GL_UNSIGNED_BYTE, backgroundImage->data);
+    //
+    //gameover
+    glBindTexture(GL_TEXTURE_2D, gameoverTexture);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, gameoverImage->width, gameoverImage->height, 0, GL_RGB, GL_UNSIGNED_BYTE, gameoverImage->data);
     //Set the screen background color
+    //
     //glClearColor(0.1, 0.1, 0.1, 1.0);
     glEnable(GL_TEXTURE_2D);
     initialize_fonts();
@@ -814,6 +827,8 @@ void render(Game *game)
 		game->oneDuck = false;
 		game->twoDuck = false;
 		std::cout << "GAME OVER" << std::endl;
+
+/**************************************************************************************************/	
 	    }
 	    if(!d && game->oneDuck && game->duckCount < 10)
 	    {
